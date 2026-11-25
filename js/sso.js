@@ -145,6 +145,8 @@ KB.mountLinkedProjects = async (el) => {
       <p class="sso-error" role="alert" data-top></p>
     </section>`;
   if (KB.animateIn) KB.animateIn(el.querySelector(".sso-list"), "enter-fast");
+  if (el.dataset.ssoBound) return; // re-renders after link/unlink keep the listeners added the first time
+  el.dataset.ssoBound = "1";
 
   el.addEventListener("click", async (e) => {
     const show = e.target.closest("[data-show]");
@@ -232,3 +234,7 @@ onAuthStateChanged(auth, (u) => {
   user = u && !u.isAnonymous ? u : null;
   if (/^#\/(links|sso)(\/|$)/.test(location.hash)) KB.route(true);
 });
+
+window.dispatchEvent(new Event("kb-sso-ready"));
+// The sso pages exist now; draw the page again if the router ran before this module loaded.
+if (/^#\/(links|sso)(\/|$)/.test(location.hash)) KB.route(true);

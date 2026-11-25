@@ -188,8 +188,8 @@ function renderDialog() {
       : `<form class="auth-panel" novalidate>
           ${close}
           <h2>Sign up</h2>
-          ${field("username", "Username", "text", "3–20 letters, digits, dots, underscores or dashes.", "username")}
-          ${field("password", "Password", "password", `At least ${MIN_PASSWORD} characters.`, "new-password")}
+          ${field("username", "Username", "text", "", "username")}
+          ${field("password", "Password", "password", "", "new-password")}
           ${field("password2", "Password again", "password", "", "new-password")}
           <p class="auth-error" role="alert"></p>
           <button type="submit" class="btn btn-accent auth-submit">Sign up</button>
@@ -410,6 +410,7 @@ KB.PAGES.settings = async (el) => {
           </div>
         </section>
         <div class="save-row"><button type="button" class="btn btn-accent save">Save</button><span class="status" role="status"></span></div>
+        <div class="sso-mount"></div>
       </div>
       <aside class="preview">
         <div class="card">
@@ -620,6 +621,11 @@ KB.PAGES.settings = async (el) => {
   });
 
   paintTheme();
+
+  // Linked projects (js/sso.js, a separate module that may load a moment later)
+  const ssoMount = $(".sso-mount");
+  if (KB.mountLinkedProjects) KB.mountLinkedProjects(ssoMount);
+  else window.addEventListener("kb-sso-ready", () => KB.mountLinkedProjects(ssoMount), { once: true });
 };
 
 // ---------- Session ----------
