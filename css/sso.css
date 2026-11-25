@@ -1,0 +1,52 @@
+/* Linked projects and the quick-login hand-off. Uses the core theme tokens and .btn / .panel / .field / .eyebrow. */
+
+.sso-panel { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.sso-list { display: flex; flex-direction: column; gap: 10px; }
+.sso-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.sso-main { display: flex; flex-direction: column; gap: 2px; flex: 1 1 200px; min-width: 0; }
+.sso-name { font-family: var(--font-head); font-weight: 700; color: var(--text); }
+.sso-user { font-size: 14px; color: var(--muted); }
+.sso-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sso-form {
+  flex: 1 1 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  animation: rise var(--mid, 280ms) var(--ease, ease) both;
+}
+.sso-form[hidden] { display: none; }
+.sso-form input[type="password"] {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  padding: 10px 12px;
+}
+.sso-form input[type="password"]:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.sso-form .sso-error, .sso-form .btn { grid-column: 1 / -1; justify-self: start; }
+.sso-error { margin: 0; min-height: 1.2em; color: var(--error); font-size: 14px; }
+.sso-error:empty { min-height: 0; }
+.sso-wait { margin: 0; color: var(--soft); animation: kb-pulse 1.2s ease-in-out infinite; }
+@keyframes kb-pulse { 50% { opacity: 0.45; } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 640px) {
+  .sso-form { grid-template-columns: minmax(0, 1fr); }
+  .sso-actions { width: 100%; }
+  .sso-actions .btn { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sso-form, .sso-wait { animation: none; }
+}
