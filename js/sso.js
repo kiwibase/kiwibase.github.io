@@ -12,7 +12,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
 // The deployed Worker's address (wrangler deploy prints it)
-const SSO_URL = "https://kiwibase-sso.REPLACE-WITH-SUBDOMAIN.workers.dev";
+const SSO_URL = "https://kiwibase-sso.kiwibase-sso.workers.dev";
 
 // Public web configs of the project sites, for signing in to them while linking
 const PROJECTS = {
