@@ -3,8 +3,8 @@
 //   profiles/{uid}  public:  { username, usernameLower, theme: { preset, angle }, bio, links: {}, avatar, updatedAt }
 //   avatars/{uid}   public:  { data: "data:image/webp;base64,…", updatedAt }  (256x256; Storage needs the paid plan)
 // Usernames become username@kiwibase.firebaseapp.com behind the scenes; Firebase keeps the passwords.
-// profiles.links holds the user's linked project accounts, { <project id>: { url } }; the linking flows that write
-// it come later, the profile already shows a button for each link present.
+// profiles.links holds the user's linked project accounts, { <project id>: { uid, username, url } }, written only by
+// the Worker (js/sso.js). Other people's profiles show a button for each link; your own shows the linking panel.
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
 import {
@@ -289,7 +289,9 @@ KB.PAGES.profile = async (el, args) => {
       <div class="profile-body">
         ${p.bio ? `<section class="panel"><p class="eyebrow">About</p><p class="bio">${esc(p.bio)}</p></section>` : ""}
         ${
-          projects.length
+          own
+            ? `<div class="sso-mount profile-sso"></div>`
+            : projects.length
             ? `<section class="panel"><p class="eyebrow">Projects</p><div class="links">${projects
                 .map((pr) => {
                   const url = (links[pr.id] && links[pr.id].url) || pr.url;
@@ -303,6 +305,12 @@ KB.PAGES.profile = async (el, args) => {
   const prof = el.querySelector(".profile");
   KB.animateIn(prof);
   KB.animateIn(el.querySelector(".profile-body"));
+  // Your own profile shows every project with link, open and unlink (js/sso.js, which may load a moment later)
+  const ssoMount = el.querySelector(".profile-sso");
+  if (ssoMount) {
+    if (KB.mountLinkedProjects) KB.mountLinkedProjects(ssoMount);
+    else window.addEventListener("kb-sso-ready", () => KB.mountLinkedProjects(ssoMount), { once: true });
+  }
 };
 
 KB.PAGES.me = (el) => {

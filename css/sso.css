@@ -26,6 +26,9 @@
   animation: rise var(--mid, 280ms) var(--ease, ease) both;
 }
 .sso-form[hidden] { display: none; }
+.sso-panel > .sso-form { border-top: 0; padding-top: 0; }
+.profile-body .profile-sso { grid-column: 1 / -1; }
+.profile-sso .sso-panel { max-width: none; }
 .sso-form input[type="password"] {
   background: var(--bg);
   border: 1px solid var(--border);

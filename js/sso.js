@@ -100,6 +100,41 @@ async function projectToken(id, username, password) {
 
 // ---------- Linked projects ----------
 
+/** The sign-in form for linking an existing account on a project; hidden inside a row, shown on the hand-off page. */
+function formHtml(id, username = "", hidden = true) {
+  const p = PROJECTS[id];
+  return `
+      <form class="sso-form" data-link="${id}"${hidden ? " hidden" : ""} novalidate>
+        <label class="field"><span>${esc(p.name)} username</span><input type="text" name="username" value="${esc(username)}" autocomplete="off" required></label>
+        <label class="field"><span>Password</span><input type="password" name="password" autocomplete="off" required></label>
+        <p class="sso-error" role="alert"></p>
+        <button type="submit" class="btn">Link</button>
+      </form>`;
+}
+
+/** Signs in to the project with the form's username and password and links that account. True when linked. */
+async function submitLink(form) {
+  const id = form.dataset.link;
+  const err = form.querySelector(".sso-error");
+  const btn = form.querySelector("button[type=submit]");
+  const v = Object.fromEntries(new FormData(form));
+  err.textContent = "";
+  if (!USERNAME_RE.test(String(v.username || "").trim())) {
+    err.textContent = errorText("wrong");
+    return false;
+  }
+  btn.disabled = true;
+  try {
+    const projectTokenValue = await projectToken(id, String(v.username).trim(), String(v.password || ""));
+    await worker("/link", { kiwibaseToken: await user.getIdToken(), project: id, projectToken: projectTokenValue });
+    return true;
+  } catch (e) {
+    btn.disabled = false;
+    err.textContent = errorText(e.message);
+    return false;
+  }
+}
+
 function rowHtml(id, link) {
   const p = PROJECTS[id];
   if (link) {
@@ -118,17 +153,13 @@ function rowHtml(id, link) {
       <div class="sso-actions">
         <button type="button" class="btn" data-show="${id}">Link account</button>
         <a class="btn" href="#/sso/${id}">Open</a>
-      </div>
-      <form class="sso-form" data-link="${id}" hidden novalidate>
-        <label class="field"><span>${esc(p.name)} username</span><input type="text" name="username" autocomplete="off" required></label>
-        <label class="field"><span>Password</span><input type="password" name="password" autocomplete="off" required></label>
-        <p class="sso-error" role="alert"></p>
-        <button type="submit" class="btn">Link</button>
-      </form>
+      </div>${formHtml(id)}
     </div>`;
 }
 
 KB.mountLinkedProjects = async (el) => {
+  // app.js may draw a page with this panel before this module's own auth listener has run
+  if (!user && auth.currentUser && !auth.currentUser.isAnonymous) user = auth.currentUser;
   if (!user) {
     el.innerHTML = `<section class="panel sso-panel"><p class="eyebrow">Linked projects</p><div><button type="button" class="btn" data-login>Log in</button></div></section>`;
     el.querySelector("[data-login]").addEventListener("click", () => KB.openLogin && KB.openLogin());
@@ -172,21 +203,7 @@ KB.mountLinkedProjects = async (el) => {
     const form = e.target.closest("form[data-link]");
     if (!form) return;
     e.preventDefault();
-    const id = form.dataset.link;
-    const err = form.querySelector(".sso-error");
-    const btn = form.querySelector("button[type=submit]");
-    const v = Object.fromEntries(new FormData(form));
-    err.textContent = "";
-    if (!USERNAME_RE.test(String(v.username || "").trim())) return (err.textContent = errorText("wrong"));
-    btn.disabled = true;
-    try {
-      const projectTokenValue = await projectToken(id, String(v.username).trim(), String(v.password || ""));
-      await worker("/link", { kiwibaseToken: await user.getIdToken(), project: id, projectToken: projectTokenValue });
-      KB.mountLinkedProjects(el);
-    } catch (e2) {
-      btn.disabled = false;
-      err.textContent = errorText(e2.message);
-    }
+    if (await submitLink(form)) KB.mountLinkedProjects(el);
   });
 };
 
@@ -218,13 +235,25 @@ KB.PAGES.sso = async (el, args) => {
     location.replace(`${r.site}#kbtoken=${encodeURIComponent(r.token)}`);
   } catch (err) {
     const code = err.message;
+    if (code === "username_taken" || code === "username_not_allowed") {
+      // The project already has an account under this name (or cannot take it): sign in to that account once to link
+      // it, then the hand-off runs again and opens it
+      const name = code === "username_taken" ? String(user.email || "").split("@")[0] : "";
+      shell(`<p class="sso-error" role="alert">${esc(code === "username_taken"
+        ? `${p.name} already has an account with this username. Log in to it to link it.`
+        : `This username cannot be used on ${p.name}. Log in to your ${p.name} account to link it.`)}</p>${formHtml(id, name, false)}`);
+      const form = el.querySelector("form[data-link]");
+      form.querySelector(name ? "input[type=password]" : "input").focus();
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (await submitLink(form)) KB.route(true);
+      });
+      return;
+    }
     shell(`
       <p class="sso-error" role="alert">${esc(errorText(code))}</p>
-      <div class="sso-actions">
-        ${code === "username_taken" || code === "username_not_allowed" ? `<a class="btn" href="#/links">Linked projects</a>` : `<button type="button" class="btn" data-retry>Try again</button>`}
-      </div>`);
-    const retry = el.querySelector("[data-retry]");
-    if (retry) retry.addEventListener("click", () => KB.route(true));
+      <div class="sso-actions"><button type="button" class="btn" data-retry>Try again</button></div>`);
+    el.querySelector("[data-retry]").addEventListener("click", () => KB.route(true));
   }
 };
 
